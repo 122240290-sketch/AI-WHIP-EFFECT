@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI Whip Effect</title>
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: #03060c;
+  color: white;
+  font-family: Arial, sans-serif;
+}
+
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.ui {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  text-align: center;
+}
+
+h1 {
+  font-size: clamp(32px, 7vw, 70px);
+  letter-spacing: 7px;
+  text-shadow: 0 0 25px #ff4000;
+}
+
+p { color: #aab4c8; }
+
+button {
+  pointer-events: auto;
+  padding: 14px 25px;
+  border: 1px solid #ff642b;
+  border-radius: 9px;
+  background: #160c0b;
+  color: #ff8b4c;
+  font-weight: bold;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+
+<canvas id="fx"></canvas>
+
+<div class="ui">
+  <h1>AI WHIP 🔥</h1>
+  <p>Klik tombol untuk memecut layar!</p>
+  <button id="strike">⚡ PECUT AI</button>
+</div>
+
+<script>
+const canvas = document.getElementById("fx");
+const ctx = canvas.getContext("2d");
+
+let w, h, dpr;
+let whips = [];
+let sparks = [];
+
+function resize() {
+  dpr = Math.min(devicePixelRatio || 1, 2);
+  w = innerWidth;
+  h = innerHeight;
+  canvas.width = w * dpr;
+  canvas.height = h * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+}
+
+addEventListener("resize", resize);
+resize();
+
+function strike() {
+  const sx = w * 0.08;
+  const sy = h * (0.25 + Math.random() * 0.3);
+  const ex = w * (0.7 + Math.random() * 0.25);
+  const ey = h * (0.65 + Math.random() * 0.2);
+  const bend = (Math.random() - 0.5) * w * 0.7;
+
+  whips.push({
+    sx, sy, ex, ey, bend,
+    start: performance.now(),
+    life: 650
+  });
+
+  for (let i = 0; i < 100; i++) {
+    sparks.push({
+      x: ex, y: ey,
+      vx: (Math.random() - 0.5) * 13,
+      vy: (Math.random() - 0.5) * 13,
+      born: performance.now(),
+      life: 350 + Math.random() * 450,
+      size: Math.random() * 3 + 1
+    });
+  }
+}
+
+function animate(now) {
+  ctx.clearRect(0, 0, w, h);
+
+  whips = whips.filter(
+    a => now - a.start < a.life
+  );
+
+  for (const a of whips) {
+    const age = now - a.start;
+    const progress = Math.min(age / 230, 1);
+    const fade = Math.max(0, 1 - age / a.life);
+
+    const x = a.sx + (a.ex - a.sx) * progress;
+    const y = a.sy + (a.ey - a.sy) * progress;
+
+    ctx.save();
+    ctx.globalAlpha = fade;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(a.sx, a.sy);
+    ctx.quadraticCurveTo(
+      (a.sx + a.ex) / 2 + a.bend,
+      (a.sy + a.ey) / 2 - 100,
+      x, y
+    );
+
+    ctx.shadowColor = "#ff3b08";
+    ctx.shadowBlur = 30;
+    ctx.strokeStyle = "#ff3608";
+    ctx.lineWidth = 16;
+    ctx.stroke();
+
+    ctx.shadowColor = "#ffb13b";
+    ctx.shadowBlur = 20;
+    ctx.strokeStyle = "#fff0ae";
+    ctx.lineWidth = 3;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  sparks = sparks.filter(
+    s => now - s.born < s.life
+  );
+
+  for (const s of sparks) {
+    const age = now - s.born;
+    ctx.globalAlpha = Math.max(0, 1 - age / s.life);
+
+    s.x += s.vx;
+    s.y += s.vy;
+    s.vx *= 0.985;
+    s.vy = s.vy * 0.985 + 0.04;
+
+    ctx.fillStyle = Math.random() > 0.5
+      ? "#ff511a" : "#ffd780";
+    ctx.shadowColor = "#ff4a0a";
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.globalAlpha = 1;
+  ctx.shadowBlur = 0;
+  requestAnimationFrame(animate);
+}
+
+document.getElementById("strike")
+  .addEventListener("click", strike);
+
+addEventListener("keydown", e => {
+  if (e.code === "Space") {
+    e.preventDefault();
+    strike();
+  }
+});
+
+requestAnimationFrame(animate);
+</script>
+</body>
+</html>
